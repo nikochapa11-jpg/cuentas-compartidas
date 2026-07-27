@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuentas Claras</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#F4F6FB;
+    --card:#FFFFFF;
+    --ink:#1F2937;
+    --ink-soft:#8A93A6;
+    --primary:#E2795A;
+    --primary-soft:#FDE9E2;
+    --secondary:#3F4E70;
+    --secondary-soft:#E7ECF3;
+    --tertiary:#5B9BD5;
+    --tertiary-soft:#E5F1FB;
+    --success:#1FAA69;
+    --success-soft:#E3F7EC;
+    --danger:#EF4444;
+    --shadow: 0 1px 2px rgba(31,41,55,0.04), 0 8px 24px rgba(31,41,55,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,Helvetica,Arial,sans-serif;
+    padding:20px 14px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:520px;margin:0 auto;}
+
+  header{
+    background:linear-gradient(135deg, var(--secondary), var(--primary));
+    border-radius:24px;
+    padding:26px 24px;
+    margin-bottom:18px;
+    color:#fff;
+    box-shadow:var(--shadow);
+  }
+  header h1{
+    font-size:1.5rem;
+    font-weight:800;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header .sub{
+    font-size:0.85rem;
+    opacity:0.85;
+    font-weight:500;
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:20px;
+    padding:18px;
+    margin-bottom:16px;
+    box-shadow:var(--shadow);
+  }
+  .card h2{
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-soft);
+    margin:0 0 14px;
+    font-weight:800;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+
+  .tabs-nav{
+    display:flex;
+    gap:4px;
+    background:var(--bg);
+    padding:4px;
+    border-radius:14px;
+    margin-bottom:18px;
+  }
+  .tab-btn{
+    flex:1;
+    padding:11px 8px;
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-size:0.85rem;
+    font-weight:700;
+    border-radius:11px;
+    -webkit-tap-highlight-color: transparent;
+    transition:all 0.15s ease;
+  }
+  .tab-btn.active{
+    background:var(--card);
+    color:var(--ink);
+    box-shadow:0 2px 6px rgba(31,41,55,0.08);
+  }
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .row .field{flex:1;min-width:110px;}
+  .field label{
+    display:block;
+    font-size:0.72rem;
+    font-weight:700;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  input,select{
+    width:100%;
+    padding:12px 14px;
+    border:1.5px solid #E9EDF3;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:0.95rem;
+    font-weight:600;
+    border-radius:12px;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--primary);}
+
+  .payer-toggle{display:flex;gap:8px;}
+  .payer-btn{
+    flex:1;
+    padding:13px 6px;
+    border:1.5px solid #E9EDF3;
+    background:var(--bg);
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.9rem;
+    font-weight:700;
+    text-align:center;
+    border-radius:12px;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+    color:var(--ink-soft);
+    transition:all 0.15s ease;
+  }
+  .payer-btn.active-a{background:var(--secondary);color:#fff;border-color:var(--secondary);}
+  .payer-btn.active-b{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+  .add-btn{
+    width:100%;
+    margin-top:4px;
+    padding:15px;
+    background:var(--secondary);
+    color:#fff;
+    border:none;
+    font-weight:800;
+    font-size:0.9rem;
+    cursor:pointer;
+    border-radius:14px;
+    box-shadow:0 6px 16px rgba(63,78,112,0.28);
+  }
+  .add-btn:active{transform:scale(0.98);}
+  .add-btn.pago-btn{background:var(--primary);box-shadow:0 6px 16px rgba(226,121,90,0.32);}
+
+  .summary{
+    background:var(--card);
+    border-radius:20px;
+    padding:20px;
+    margin-bottom:16px;
+    box-shadow:var(--shadow);
+  }
+  .summary h2{
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-soft);
+    margin:0 0 14px;
+    font-weight:800;
+  }
+  .balance-line{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 14px;
+    border-radius:14px;
+    margin-bottom:8px;
+    background:var(--tertiary-soft);
+  }
+  .balance-line:last-child{margin-bottom:0;}
+  .balance-line .cur-tag{
+    font-size:0.7rem;
+    font-weight:800;
+    color:var(--tertiary);
+    background:#fff;
+    padding:3px 8px;
+    border-radius:999px;
+    margin-right:8px;
+  }
+  .balance-line .amt{font-weight:800;font-size:1.05rem;}
+  .balance-line.settled{background:var(--success-soft);}
+  .balance-line.settled .cur-tag{color:var(--success);}
+  .balance-line.owes-a{background:var(--secondary-soft);}
+  .balance-line.owes-a .cur-tag{color:var(--secondary);}
+  .balance-line.owes-b{background:var(--primary-soft);}
+  .balance-line.owes-b .cur-tag{color:var(--primary);}
+  .balance-line .txt{font-size:0.88rem;font-weight:600;color:var(--ink);}
+
+  .empty-note{
+    font-size:0.85rem;
+    color:var(--ink-soft);
+    font-weight:500;
+    text-align:center;
+    padding:20px 0;
+  }
+
+  .ledger h2 select{
+    width:auto;
+    font-size:0.75rem;
+    font-weight:700;
+    padding:7px 10px;
+    border-radius:10px;
+    border:1.5px solid #E9EDF3;
+  }
+
+  .total-gastado{
+    font-size:0.8rem;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin-bottom:14px;
+    padding:10px 14px;
+    background:var(--bg);
+    border-radius:12px;
+  }
+
+  .entry{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px solid #F0F2F7;
+    gap:10px;
+  }
+  .entry:last-child{border-bottom:none;}
+  .entry-left{display:flex;align-items:center;gap:12px;}
+  .avatar{
+    width:38px;height:38px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;
+    font-size:0.85rem;
+    color:#fff;
+    flex-shrink:0;
+  }
+  .avatar.a{background:var(--secondary);}
+  .avatar.b{background:var(--primary);}
+  .avatar.pago{background:var(--success);}
+  .entry .desc-txt{font-size:0.92rem;font-weight:700;}
+  .entry .meta{
+    font-size:0.75rem;
+    color:var(--ink-soft);
+    font-weight:500;
+    margin-top:1px;
+  }
+  .entry .right{
+    text-align:right;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .entry .amount{
+    font-weight:800;
+    font-size:0.95rem;
+    white-space:nowrap;
+  }
+  .del{
+    background:#FDEEEE;
+    border:none;
+    color:var(--danger);
+    cursor:pointer;
+    font-size:0.9rem;
+    line-height:1;
+    width:28px;height:28px;
+    border-radius:50%;
+    flex-shrink:0;
+  }
+  .del:hover{background:#FBDCDC;}
+
+  .status{
+    text-align:center;
+    font-size:0.8rem;
+    font-weight:700;
+    color:var(--ink-soft);
+    margin:-6px 0 14px;
+    min-height:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Cuentas Claras 💸</h1>
+    <div class="sub">gastos compartidos · Nico & Caro</div>
+  </header>
+
+  <div class="status" id="status"></div>
+
+  <div class="card">
+    <div class="tabs-nav">
+      <button type="button" class="tab-btn active" id="tabGastoBtn">Nuevo gasto</button>
+      <button type="button" class="tab-btn" id="tabPagoBtn">Añadir pago</button>
+    </div>
+
+    <div class="tab-panel active" id="panelGasto">
+      <div class="row">
+        <div class="field">
+          <label>Monto</label>
+          <input id="monto" type="number" step="0.01" min="0" placeholder="0">
+        </div>
+        <div class="field">
+          <label>Moneda</label>
+          <select id="moneda">
+            <option value="CLP">CLP $ (Chile)</option>
+            <option value="BRL">BRL R$ (Brasil)</option>
+            <option value="USD">USD $ (Dólar)</option>
+            <option value="EUR">EUR € (Euro)</option>
+            <option value="GBP">GBP £ (Londres)</option>
+            <option value="CNY">CNY ¥ (China)</option>
+            <option value="HKD">HKD $ (Hong Kong)</option>
+            <option value="JPY">JPY ¥ (Japón)</option>
+            <option value="TWD">TWD $ (Taiwán)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>¿Quién pagó?</label>
+          <div class="payer-toggle">
+            <button type="button" class="payer-btn active-a" id="btnA">Nico</button>
+            <button type="button" class="payer-btn" id="btnB">Caro</button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Descripción (opcional)</label>
+          <input id="desc" type="text" maxlength="60" placeholder="ej. supermercado">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Reparto</label>
+          <select id="reparto">
+            <option value="half">Se divide a la mitad</option>
+            <option value="full">Fue 100% para la otra persona (debe todo)</option>
+          </select>
+        </div>
+      </div>
+      <button class="add-btn" id="addBtn">Registrar gasto</button>
+    </div>
+
+    <div class="tab-panel" id="panelPago">
+      <div class="row">
+        <div class="field">
+          <label>Monto</label>
+          <input id="pagoMonto" type="number" step="0.01" min="0" placeholder="0">
+        </div>
+        <div class="field">
+          <label>Moneda</label>
+          <select id="pagoMoneda">
+            <option value="CLP">CLP $ (Chile)</option>
+            <option value="BRL">BRL R$ (Brasil)</option>
+            <option value="USD">USD $ (Dólar)</option>
+            <option value="EUR">EUR € (Euro)</option>
+            <option value="GBP">GBP £ (Londres)</option>
+            <option value="CNY">CNY ¥ (China)</option>
+            <option value="HKD">HKD $ (Hong Kong)</option>
+            <option value="JPY">JPY ¥ (Japón)</option>
+            <option value="TWD">TWD $ (Taiwán)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>¿Quién le paga a quién?</label>
+          <div class="payer-toggle">
+            <button type="button" class="payer-btn active-a" id="pagoBtnA">Nico → Caro</button>
+            <button type="button" class="payer-btn" id="pagoBtnB">Caro → Nico</button>
+          </div>
+        </div>
+      </div>
+      <button class="add-btn pago-btn" id="pagoBtn">Registrar pago</button>
+    </div>
+  </div>
+
+  <div class="summary">
+    <h2>Balance</h2>
+    <div id="balanceBox"></div>
+  </div>
+
+  <div class="card ledger">
+    <h2>
+      Movimientos
+      <select id="filtroMoneda">
+        <option value="all">Todas</option>
+        <option value="CLP">CLP</option>
+        <option value="BRL">BRL</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+        <option value="CNY">CNY</option>
+        <option value="HKD">HKD</option>
+        <option value="JPY">JPY</option>
+        <option value="TWD">TWD</option>
+      </select>
+    </h2>
+    <div id="totalGastado" class="total-gastado" style="display:none;"></div>
+    <div id="lista"></div>
+  </div>
+
+</div>
+
+<script>
+window.URL_SUPABASE = 'https://jpmhxyenzstilzbkydwy.supabase.co';
+window.KEY_SUPABASE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwbWh4eWVuenN0aWx6Ymt5ZHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMzkyMzUsImV4cCI6MjEwMDcxNTIzNX0.oW7RLCHNxvg6PFCisrF1VSEumHxo_h9geXwlAf7CV0w';
+
+var PERSONA_A = 'Nico';
+var PERSONA_B = 'Caro';
+
+var db = null;
+var currentPayer = 'A';
+var currentPagoDireccion = 'A';
+var currentFiltro = 'all';
+var listaGastos = [];
+
+var CUR_FMT = {
+  CLP: function(n){ return new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n); },
+  BRL: function(n){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n); },
+  USD: function(n){ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n); },
+  EUR: function(n){ return new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(n); },
+  GBP: function(n){ return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(n); },
+  CNY: function(n){ return new Intl.NumberFormat('zh-CN',{style:'currency',currency:'CNY'}).format(n); },
+  HKD: function(n){ return new Intl.NumberFormat('en-HK',{style:'currency',currency:'HKD'}).format(n); },
+  JPY: function(n){ return new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(n); },
+  TWD: function(n){ return new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD'}).format(n); }
+};
+
+function updateStatus(msg, isErr){
+  var s = document.getElementById('status');
+  if(!s) return;
+  s.textContent = msg || '';
+  s.style.color = isErr ? '#EF4444' : '#1FAA69';
+}
+
+function switchTab(tab){
+  var btnGasto = document.getElementById('tabGastoBtn');
+  var btnPago = document.getElementById('tabPagoBtn');
+  var panelGasto = document.getElementById('panelGasto');
+  var panelPago = document.getElementById('panelPago');
+  if(tab === 'gasto'){
+    btnGasto.className = 'tab-btn active';
+    btnPago.className = 'tab-btn';
+    panelGasto.className = 'tab-panel active';
+    panelPago.className = 'tab-panel';
+  } else {
+    btnGasto.className = 'tab-btn';
+    btnPago.className = 'tab-btn active';
+    panelGasto.className = 'tab-panel';
+    panelPago.className = 'tab-panel active';
+  }
+}
+
+function selectPayer(p){
+  currentPayer = p;
+  var btnA = document.getElementById('btnA');
+  var btnB = document.getElementById('btnB');
+  if(currentPayer === 'A'){
+    btnA.className = 'payer-btn active-a';
+    btnB.className = 'payer-btn';
+  } else {
+    btnA.className = 'payer-btn';
+    btnB.className = 'payer-btn active-b';
+  }
+}
+
+function selectPagoDireccion(p){
+  currentPagoDireccion = p;
+  var btnA = document.getElementById('pagoBtnA');
+  var btnB = document.getElementById('pagoBtnB');
+  if(currentPagoDireccion === 'A'){
+    btnA.className = 'payer-btn active-a';
+    btnB.className = 'payer-btn';
+  } else {
+    btnA.className = 'payer-btn';
+    btnB.className = 'payer-btn active-b';
+  }
+}
+
+function computeBalances(){
+  var bal = {CLP:0, BRL:0, USD:0, EUR:0, GBP:0, CNY:0, HKD:0, JPY:0, TWD:0};
+  listaGastos.forEach(function(g){
+    var credito = (g.tipo === 'pago' || (g.reparto || 'half') === 'full') ? g.monto : g.monto/2;
+    if(g.payer === 'A') bal[g.moneda] += credito;
+    else bal[g.moneda] -= credito;
+  });
+  return bal;
+}
+
+function renderUI(){
+  var bal = computeBalances();
+  var balanceBox = document.getElementById('balanceBox');
+  var currencies = ['CLP','BRL','USD','EUR','GBP','CNY','HKD','JPY','TWD'];
+  var activeCur = currencies.filter(function(c){
+    return listaGastos.some(function(g){ return g.moneda === c; });
+  });
+
+  if(activeCur.length === 0){
+    balanceBox.innerHTML = '<div class="empty-note">Aún no hay gastos registrados 👀</div>';
+  } else {
+    balanceBox.innerHTML = activeCur.map(function(c){
+      var v = bal[c];
+      var cls, txt;
+      if(Math.abs(v) < 0.005){
+        cls = 'settled';
+        txt = 'Cuentas saldadas 🎉';
+      } else if(v > 0){
+        cls = 'owes-b';
+        txt = PERSONA_B + ' le debe a ' + PERSONA_A;
+      } else {
+        cls = 'owes-a';
+        txt = PERSONA_A + ' le debe a ' + PERSONA_B;
+      }
+      return '<div class="balance-line ' + cls + '">' +
+        '<span class="txt"><span class="cur-tag">' + c + '</span>' + txt + '</span>' +
+        '<span class="amt">' + CUR_FMT[c](Math.abs(v)) + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  var filtrados = currentFiltro === 'all' ? listaGastos : listaGastos.filter(function(g){ return g.moneda === currentFiltro; });
+
+  var totalBox = document.getElementById('totalGastado');
+  if(currentFiltro === 'all'){
+    totalBox.style.display = 'none';
+  } else {
+    totalBox.style.display = 'block';
+    var totalGasto = filtrados.filter(function(g){ return g.tipo !== 'pago'; }).reduce(function(a,g){ return a + g.monto; }, 0);
+    var totalPagos = filtrados.filter(function(g){ return g.tipo === 'pago'; }).reduce(function(a,g){ return a + g.monto; }, 0);
+    totalBox.textContent = 'Total gastado en ' + currentFiltro + ': ' + CUR_FMT[currentFiltro](totalGasto) +
+      (totalPagos > 0 ? '  ·  Pagos: ' + CUR_FMT[currentFiltro](totalPagos) : '');
+  }
+
+  var lista = document.getElementById('lista');
+  if(filtrados.length === 0){
+    lista.innerHTML = '<div class="empty-note">' + (listaGastos.length === 0 ? 'Registra tu primer gasto arriba 👆' : 'No hay movimientos en esta moneda.') + '</div>';
+    return;
+  }
+  var sorted = filtrados.slice().sort(function(a,b){ return new Date(b.fecha) - new Date(a.fecha); });
+  lista.innerHTML = sorted.map(function(g){
+    var who = g.payer === 'A' ? PERSONA_A : PERSONA_B;
+    var avatarClass = g.tipo === 'pago' ? 'pago' : (g.payer === 'A' ? 'a' : 'b');
+    var initial = g.tipo === 'pago' ? '💸' : who.charAt(0);
+    var otro = g.payer === 'A' ? PERSONA_B : PERSONA_A;
+    var d = new Date(g.fecha);
+    var fechaStr = d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit'});
+    var repartoTxt, titulo;
+    if(g.tipo === 'pago'){
+      repartoTxt = fechaStr + ' · pago directo';
+      titulo = who + ' → ' + otro;
+    } else {
+      repartoTxt = fechaStr + ' · ' + ((g.reparto || 'half') === 'full' ? ('100% para ' + otro) : 'a la mitad');
+      titulo = g.desc;
+    }
+    return '<div class="entry">' +
+      '<div class="entry-left">' +
+        '<div class="avatar ' + avatarClass + '">' + initial + '</div>' +
+        '<div>' +
+          '<div class="desc-txt">' + titulo + '</div>' +
+          '<div class="meta">' + repartoTxt + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="right">' +
+        '<span class="amount">' + CUR_FMT[g.moneda](g.monto) + '</span>' +
+        '<button class="del" onclick="removeGasto(\'' + g.id + '\')" title="Eliminar">✕</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function loadData(){
+  updateStatus('Cargando datos...');
+  try {
+    if (!window.supabase) {
+      updateStatus('Error: No cargó la librería de Supabase', true);
+      renderUI();
+      return;
+    }
+
+    db = window.supabase.createClient(window.URL_SUPABASE, window.KEY_SUPABASE);
+
+    var res = await db.from('gastos').select('*');
+    if (res.error) {
+      updateStatus('Error Supabase: ' + res.error.message, true);
+    } else {
+      listaGastos = (res.data || []).map(function(g){
+        return {
+          id: g.id,
+          monto: parseFloat(g.monto),
+          moneda: g.moneda,
+          payer: g.payer,
+          reparto: g.reparto,
+          tipo: g.tipo || 'gasto',
+          desc: g.desc_texto,
+          fecha: g.fecha
+        };
+      });
+      updateStatus('');
+    }
+  } catch(e) {
+    updateStatus('Error de conexión: ' + e.message, true);
+  }
+  renderUI();
+}
+
+async function addGasto(){
+  if(!db){
+    updateStatus('Sin conexión con la base de datos', true);
+    return;
+  }
+
+  var monto = parseFloat(document.getElementById('monto').value);
+  var moneda = document.getElementById('moneda').value;
+  var desc = document.getElementById('desc').value.trim();
+  var reparto = document.getElementById('reparto').value;
+
+  if(!monto || monto <= 0){
+    updateStatus('Ingresa un monto válido', true);
+    return;
+  }
+
+  var entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    monto: monto,
+    moneda: moneda,
+    payer: currentPayer,
+    reparto: reparto,
+    tipo: 'gasto',
+    desc_texto: desc || '(sin descripción)',
+    fecha: new Date().toISOString()
+  };
+
+  updateStatus('Guardando...');
+  var res = await db.from('gastos').insert([entry]);
+
+  if(res.error){
+    updateStatus('Error al guardar: ' + res.error.message, true);
+  } else {
+    listaGastos.push({
+      id: entry.id, monto: entry.monto, moneda: entry.moneda, payer: entry.payer,
+      reparto: entry.reparto, tipo: entry.tipo, desc: entry.desc_texto, fecha: entry.fecha
+    });
+    document.getElementById('monto').value = '';
+    document.getElementById('desc').value = '';
+    updateStatus('Gasto registrado ✓');
+    setTimeout(function(){ updateStatus(''); }, 1500);
+    renderUI();
+  }
+}
+
+async function addPago(){
+  if(!db){
+    updateStatus('Sin conexión con la base de datos', true);
+    return;
+  }
+
+  var monto = parseFloat(document.getElementById('pagoMonto').value);
+  var moneda = document.getElementById('pagoMoneda').value;
+
+  if(!monto || monto <= 0){
+    updateStatus('Ingresa un monto válido', true);
+    return;
+  }
+
+  var entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    monto: monto,
+    moneda: moneda,
+    payer: currentPagoDireccion,
+    reparto: 'full',
+    tipo: 'pago',
+    desc_texto: 'Pago/abono',
+    fecha: new Date().toISOString()
+  };
+
+  updateStatus('Guardando pago...');
+  var res = await db.from('gastos').insert([entry]);
+
+  if(res.error){
+    updateStatus('Error al guardar: ' + res.error.message, true);
+  } else {
+    listaGastos.push({
+      id: entry.id, monto: entry.monto, moneda: entry.moneda, payer: entry.payer,
+      reparto: entry.reparto, tipo: entry.tipo, desc: entry.desc_texto, fecha: entry.fecha
+    });
+    document.getElementById('pagoMonto').value = '';
+    updateStatus('Pago registrado ✓');
+    setTimeout(function(){ updateStatus(''); }, 1500);
+    renderUI();
+  }
+}
+
+async function removeGasto(id){
+  if(!db) return;
+  updateStatus('Eliminando...');
+  var res = await db.from('gastos').delete().eq('id', id);
+
+  if (res.error) {
+    updateStatus('Error al eliminar: ' + res.error.message, true);
+  } else {
+    listaGastos = listaGastos.filter(function(g){ return g.id !== id; });
+    updateStatus('');
+    renderUI();
+  }
+}
+
+window.addEventListener('load', function() {
+  document.getElementById('tabGastoBtn').addEventListener('click', function(){ switchTab('gasto'); });
+  document.getElementById('tabPagoBtn').addEventListener('click', function(){ switchTab('pago'); });
+
+  document.getElementById('btnA').addEventListener('click', function(){ selectPayer('A'); });
+  document.getElementById('btnB').addEventListener('click', function(){ selectPayer('B'); });
+  document.getElementById('addBtn').addEventListener('click', addGasto);
+  document.getElementById('monto').addEventListener('keydown', function(e){ if(e.key === 'Enter') addGasto(); });
+
+  document.getElementById('pagoBtnA').addEventListener('click', function(){ selectPagoDireccion('A'); });
+  document.getElementById('pagoBtnB').addEventListener('click', function(){ selectPagoDireccion('B'); });
+  document.getElementById('pagoBtn').addEventListener('click', addPago);
+  document.getElementById('pagoMonto').addEventListener('keydown', function(e){ if(e.key === 'Enter') addPago(); });
+
+  document.getElementById('filtroMoneda').addEventListener('change', function(e){
+    currentFiltro = e.target.value;
+    renderUI();
+  });
+
+  loadData();
+});
+</script>
+</body>
+</html>
