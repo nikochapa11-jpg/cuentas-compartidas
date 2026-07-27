@@ -47,31 +47,6 @@
     letter-spacing:0.08em;
   }
 
-  .names{
-    display:flex;
-    gap:10px;
-    margin-bottom:20px;
-  }
-  .names label{
-    flex:1;
-    font-family:'Courier New',monospace;
-    font-size:0.7rem;
-    color:var(--ink-soft);
-    text-transform:uppercase;
-    letter-spacing:0.05em;
-  }
-  .names input{
-    width:100%;
-    margin-top:4px;
-    padding:8px 10px;
-    border:1px solid var(--line);
-    background:var(--paper-dark);
-    color:var(--ink);
-    font-family:inherit;
-    font-size:0.95rem;
-    border-radius:2px;
-  }
-
   .card{
     background:var(--paper-dark);
     border:1px solid var(--line);
@@ -114,12 +89,13 @@
   .payer-toggle{display:flex;gap:8px;}
   .payer-btn{
     flex:1;
-    padding:9px 6px;
+    padding:12px 6px;
     border:1px solid var(--line);
     background:var(--paper);
     cursor:pointer;
     font-family:inherit;
-    font-size:0.85rem;
+    font-size:0.95rem;
+    font-weight:bold;
     text-align:center;
     border-radius:2px;
   }
@@ -203,9 +179,10 @@
     font-family:'Courier New',monospace;
     font-size:0.65rem;
     text-transform:uppercase;
-    padding:1px 5px;
+    padding:2px 6px;
     border-radius:2px;
     margin-right:6px;
+    font-weight:bold;
   }
   .who.a{background:var(--teal);color:#fff;}
   .who.b{background:var(--sienna);color:#fff;}
@@ -252,17 +229,8 @@
 
   <header>
     <h1>Cuentas Claras</h1>
-    <div class="sub">registro de gastos compartidos</div>
+    <div class="sub">gastos compartidos Nico & Caro</div>
   </header>
-
-  <div class="names">
-    <label>Persona A
-      <input id="nameA" value="Yo" maxlength="16">
-    </label>
-    <label>Persona B
-      <input id="nameB" value="Pareja" maxlength="16">
-    </label>
-  </div>
 
   <div class="status" id="status">Cargando datos...</div>
 
@@ -292,8 +260,8 @@
       <div class="field">
         <label>¿Quién pagó?</label>
         <div class="payer-toggle">
-          <div class="payer-btn active-a" id="btnA" onclick="setPayer('A')"></div>
-          <div class="payer-btn" id="btnB" onclick="setPayer('B')"></div>
+          <button type="button" class="payer-btn active-a" id="btnA" onclick="setPayer('A')">Nico</button>
+          <button type="button" class="payer-btn" id="btnB" onclick="setPayer('B')">Caro</button>
         </div>
       </div>
     </div>
@@ -333,6 +301,9 @@ const SUPABASE_URL = 'https://jpmhxyeunstilzbkydwy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwbWh4eWVuenN0aWx6Ymt5ZHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMzkyMzUsImV4cCI6MjEwMDcxNTIzNX0.oW7RLCHNxvg6PFCisrF1VSEumHxo_h9geXwlAf7CV0w';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const PERSONA_A = 'Nico';
+const PERSONA_B = 'Caro';
+
 let payer = 'A';
 let gastos = [];
 
@@ -360,26 +331,15 @@ function setPayer(p){
 }
 
 function refreshPayerButtons(){
-  const nameA = document.getElementById('nameA').value || 'Yo';
-  const nameB = document.getElementById('nameB').value || 'Pareja';
   const btnA = document.getElementById('btnA');
   const btnB = document.getElementById('btnB');
-  btnA.textContent = nameA;
-  btnB.textContent = nameB;
   btnA.className = 'payer-btn' + (payer==='A' ? ' active-a' : '');
   btnB.className = 'payer-btn' + (payer==='B' ? ' active-b' : '');
 }
 
 async function loadData(){
   setStatus('Cargando gastos...');
-  
-  // Cargar nombres del localStorage local del navegador (opcional)
-  const savedNameA = localStorage.getItem('cuentas-claras-nameA');
-  const savedNameB = localStorage.getItem('cuentas-claras-nameB');
-  if(savedNameA) document.getElementById('nameA').value = savedNameA;
-  if(savedNameB) document.getElementById('nameB').value = savedNameB;
 
-  // Cargar gastos desde el Supabase
   const { data, error } = await supabase.from('gastos').select('*');
   
   if (error) {
@@ -398,15 +358,6 @@ async function loadData(){
     setStatus('');
   }
   
-  refreshPayerButtons();
-  render();
-}
-
-function saveNames(){
-  const a = document.getElementById('nameA').value || 'Yo';
-  const b = document.getElementById('nameB').value || 'Pareja';
-  localStorage.setItem('cuentas-claras-nameA', a);
-  localStorage.setItem('cuentas-claras-nameB', b);
   refreshPayerButtons();
   render();
 }
@@ -475,9 +426,6 @@ function computeBalances(){
 }
 
 function render(){
-  const nameA = document.getElementById('nameA').value || 'Yo';
-  const nameB = document.getElementById('nameB').value || 'Pareja';
-
   const bal = computeBalances();
   const balanceBox = document.getElementById('balanceBox');
   const currencies = ['CLP','BRL','USD','EUR','GBP','CNY','HKD','JPY','TWD'];
@@ -492,9 +440,9 @@ function render(){
       if(Math.abs(v) < 0.005){
         line = `<span class="settled">Cuentas saldadas</span>`;
       } else if(v > 0){
-        line = `<span class="owes">${nameB} le debe a ${nameA}</span>`;
+        line = `<span class="owes">${PERSONA_B} le debe a ${PERSONA_A}</span>`;
       } else {
-        line = `<span class="owes">${nameA} le debe a ${nameB}</span>`;
+        line = `<span class="owes">${PERSONA_A} le debe a ${PERSONA_B}</span>`;
       }
       return `<div class="balance-line"><span>${c} — ${line}</span><span class="amt">${CUR_FMT[c](Math.abs(v))}</span></div>`;
     }).join('');
@@ -507,9 +455,9 @@ function render(){
   }
   const sorted = [...gastos].sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
   lista.innerHTML = sorted.map(g=>{
-    const who = g.payer === 'A' ? nameA : nameB;
+    const who = g.payer === 'A' ? PERSONA_A : PERSONA_B;
     const whoClass = g.payer === 'A' ? 'a' : 'b';
-    const otro = g.payer === 'A' ? nameB : nameA;
+    const otro = g.payer === 'A' ? PERSONA_B : PERSONA_A;
     const d = new Date(g.fecha);
     const fechaStr = d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit'});
     const repartoTxt = (g.reparto || 'half') === 'full' ? `100% para ${otro}` : 'dividido a la mitad';
@@ -526,8 +474,6 @@ function render(){
   }).join('');
 }
 
-document.getElementById('nameA').addEventListener('change', saveNames);
-document.getElementById('nameB').addEventListener('change', saveNames);
 document.getElementById('monto').addEventListener('keydown', e=>{
   if(e.key === 'Enter') addGasto();
 });
