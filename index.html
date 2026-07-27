@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuentas Claras</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#E9E1CC;
+    --paper-dark:#DED3B4;
+    --ink:#2B2620;
+    --ink-soft:#5C5346;
+    --teal:#1B6B63;
+    --sienna:#9A4A22;
+    --mustard:#B98A1E;
+    --line:#C9BD9C;
+    --red:#8C3B2E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+
+  header{
+    text-align:center;
+    margin-bottom:22px;
+    padding-bottom:16px;
+    border-bottom:2px solid var(--ink);
+  }
+  header h1{
+    font-size:1.7rem;
+    letter-spacing:0.06em;
+    margin:0 0 4px;
+    text-transform:uppercase;
+  }
+  header .sub{
+    font-family:'Courier New',monospace;
+    font-size:0.75rem;
+    color:var(--ink-soft);
+    letter-spacing:0.08em;
+  }
+
+  .card{
+    background:var(--paper-dark);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:18px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--ink-soft);
+    margin:0 0 14px;
+    font-family:'Courier New',monospace;
+  }
+
+  .row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .row .field{flex:1;min-width:110px;}
+  .field label{
+    display:block;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--ink-soft);
+    margin-bottom:3px;
+    font-family:'Courier New',monospace;
+  }
+  input,select{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:0.95rem;
+    border-radius:2px;
+  }
+  input:focus,select:focus{outline:2px solid var(--teal);outline-offset:1px;}
+
+  .payer-toggle{display:flex;gap:8px;}
+  .payer-btn{
+    flex:1;
+    padding:12px 6px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.95rem;
+    font-weight:bold;
+    text-align:center;
+    border-radius:2px;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .payer-btn.active-a{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .payer-btn.active-b{background:var(--sienna);color:#fff;border-color:var(--sienna);}
+
+  .add-btn{
+    width:100%;
+    margin-top:6px;
+    padding:12px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    font-family:'Courier New',monospace;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    font-size:0.8rem;
+    cursor:pointer;
+    border-radius:2px;
+  }
+  .add-btn:hover{background:var(--teal);}
+
+  .summary{
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:3px;
+    padding:18px;
+    margin-bottom:20px;
+  }
+  .summary h2{
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--paper-dark);
+    margin:0 0 12px;
+    font-family:'Courier New',monospace;
+  }
+  .balance-line{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 0;
+    border-bottom:1px dashed rgba(233,225,204,0.25);
+    font-family:'Courier New',monospace;
+    font-size:0.95rem;
+  }
+  .balance-line:last-child{border-bottom:none;}
+  .balance-line .amt{font-weight:bold;}
+  .settled{color:#9AC7A0;}
+  .owes{color:#E3B7A0;}
+
+  .empty-note{
+    font-family:'Courier New',monospace;
+    font-size:0.8rem;
+    color:var(--paper-dark);
+    opacity:0.7;
+  }
+
+  .ledger h2{
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--ink-soft);
+    margin:0 0 12px;
+    font-family:'Courier New',monospace;
+  }
+  .entry{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+    gap:8px;
+  }
+  .entry:last-child{border-bottom:none;}
+  .entry .desc{
+    font-size:0.9rem;
+  }
+  .entry .desc .who{
+    display:inline-block;
+    font-family:'Courier New',monospace;
+    font-size:0.65rem;
+    text-transform:uppercase;
+    padding:2px 6px;
+    border-radius:2px;
+    margin-right:6px;
+    font-weight:bold;
+  }
+  .who.a{background:var(--teal);color:#fff;}
+  .who.b{background:var(--sienna);color:#fff;}
+  .entry .meta{
+    font-size:0.72rem;
+    color:var(--ink-soft);
+    font-family:'Courier New',monospace;
+  }
+  .entry .right{
+    text-align:right;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .entry .amount{
+    font-family:'Courier New',monospace;
+    font-weight:bold;
+    white-space:nowrap;
+  }
+  .del{
+    background:none;
+    border:none;
+    color:var(--red);
+    cursor:pointer;
+    font-size:1rem;
+    line-height:1;
+    padding:2px 4px;
+  }
+  .del:hover{opacity:0.6;}
+
+  .status{
+    text-align:center;
+    font-family:'Courier New',monospace;
+    font-size:0.75rem;
+    color:var(--ink-soft);
+    margin-top:-8px;
+    margin-bottom:16px;
+    min-height:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Cuentas Claras</h1>
+    <div class="sub">gastos compartidos Nico & Caro</div>
+  </header>
+
+  <div class="status" id="status"></div>
+
+  <div class="card">
+    <h2>Nuevo gasto</h2>
+    <div class="row">
+      <div class="field">
+        <label>Monto</label>
+        <input id="monto" type="number" step="0.01" min="0" placeholder="0">
+      </div>
+      <div class="field">
+        <label>Moneda</label>
+        <select id="moneda">
+          <option value="CLP">CLP $ (Chile)</option>
+          <option value="BRL">BRL R$ (Brasil)</option>
+          <option value="USD">USD $ (Dólar)</option>
+          <option value="EUR">EUR € (Euro)</option>
+          <option value="GBP">GBP £ (Londres)</option>
+          <option value="CNY">CNY ¥ (China)</option>
+          <option value="HKD">HKD $ (Hong Kong)</option>
+          <option value="JPY">JPY ¥ (Japón)</option>
+          <option value="TWD">TWD $ (Taiwán)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>¿Quién pagó?</label>
+        <div class="payer-toggle">
+          <div class="payer-btn active-a" id="btnA">Nico</div>
+          <div class="payer-btn" id="btnB">Caro</div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Descripción (opcional)</label>
+        <input id="desc" type="text" maxlength="60" placeholder="ej. supermercado">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Reparto</label>
+        <select id="reparto">
+          <option value="half">Se divide a la mitad</option>
+          <option value="full">Fue 100% para la otra persona (debe todo)</option>
+        </select>
+      </div>
+    </div>
+    <button class="add-btn" id="addBtn">Registrar gasto</button>
+  </div>
+
+  <div class="summary">
+    <h2>Balance</h2>
+    <div id="balanceBox"></div>
+  </div>
+
+  <div class="card ledger">
+    <h2>Movimientos</h2>
+    <div id="lista"></div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://jpmhxyeunstilzbkydwy.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwbWh4eWVuenN0aWx6Ymt5ZHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMzkyMzUsImV4cCI6MjEwMDcxNTIzNX0.oW7RLCHNxvg6PFCisrF1VSEumHxo_h9geXwlAf7CV0w';
+
+const PERSONA_A = 'Nico';
+const PERSONA_B = 'Caro';
+
+let dbClient = null;
+let payer = 'A';
+let gastos = [];
+
+const CUR_FMT = {
+  CLP: n => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n),
+  BRL: n => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n),
+  USD: n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n),
+  EUR: n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(n),
+  GBP: n => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(n),
+  CNY: n => new Intl.NumberFormat('zh-CN',{style:'currency',currency:'CNY'}).format(n),
+  HKD: n => new Intl.NumberFormat('en-HK',{style:'currency',currency:'HKD'}).format(n),
+  JPY: n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(n),
+  TWD: n => new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD'}).format(n)
+};
+
+function setStatus(msg, isErr){
+  const s = document.getElementById('status');
+  s.textContent = msg || '';
+  s.style.color = isErr ? '#8C3B2E' : '#1B6B63';
+}
+
+function setPayer(p){
+  payer = p;
+  const btnA = document.getElementById('btnA');
+  const btnB = document.getElementById('btnB');
+  if(payer === 'A'){
+    btnA.className = 'payer-btn active-a';
+    btnB.className = 'payer-btn';
+  } else {
+    btnA.className = 'payer-btn';
+    btnB.className = 'payer-btn active-b';
+  }
+}
+
+async function loadData(){
+  setStatus('Cargando datos...');
+  
+  try {
+    if (typeof window.supabase === 'undefined') {
+      setStatus('Error: Librería de Supabase no cargó', true);
+      render();
+      return;
+    }
+    
+    dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const { data, error } = await dbClient.from('gastos').select('*');
+    
+    if (error) {
+      setStatus('Error Supabase: ' + error.message, true);
+    } else {
+      gastos = (data || []).map(g => ({
+        id: g.id,
+        monto: parseFloat(g.monto),
+        moneda: g.moneda,
+        payer: g.payer,
+        reparto: g.reparto,
+        desc: g.desc_texto,
+        fecha: g.fecha
+      }));
+      setStatus('');
+    }
+  } catch(e) {
+    setStatus('Error de conexión: ' + e.message, true);
+  }
+
+  render();
+}
+
+async function addGasto(){
+  if(!dbClient){
+    setStatus('Sin conexión con la base de datos', true);
+    return;
+  }
+
+  const monto = parseFloat(document.getElementById('monto').value);
+  const moneda = document.getElementById('moneda').value;
+  const desc = document.getElementById('desc').value.trim();
+  const reparto = document.getElementById('reparto').value;
+
+  if(!monto || monto <= 0){
+    setStatus('Ingresa un monto válido', true);
+    return;
+  }
+
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    monto: monto,
+    moneda: moneda,
+    payer: payer,
+    reparto: reparto,
+    desc_texto: desc || '(sin descripción)',
+    fecha: new Date().toISOString()
+  };
+
+  setStatus('Guardando...');
+  
+  const { error } = await dbClient.from('gastos').insert([entry]);
+
+  if(error){
+    setStatus('Error al guardar: ' + error.message, true);
+  } else {
+    gastos.push({
+      ...entry,
+      desc: entry.desc_texto
+    });
+    document.getElementById('monto').value = '';
+    document.getElementById('desc').value = '';
+    setStatus('Gasto registrado ✓');
+    setTimeout(()=>setStatus(''), 1500);
+    render();
+  }
+}
+
+async function deleteGasto(id){
+  if(!dbClient) return;
+  setStatus('Eliminando...');
+  const { error } = await dbClient.from('gastos').delete().eq('id', id);
+  
+  if (error) {
+    setStatus('Error al eliminar: ' + error.message, true);
+  } else {
+    gastos = gastos.filter(g => g.id !== id);
+    setStatus('');
+    render();
+  }
+}
+
+function computeBalances(){
+  const bal = {CLP:0, BRL:0, USD:0, EUR:0, GBP:0, CNY:0, HKD:0, JPY:0, TWD:0};
+  gastos.forEach(g=>{
+    const credito = (g.reparto || 'half') === 'full' ? g.monto : g.monto/2;
+    if(g.payer==='A') bal[g.moneda] += credito;
+    else bal[g.moneda] -= credito;
+  });
+  return bal;
+}
+
+function render(){
+  const bal = computeBalances();
+  const balanceBox = document.getElementById('balanceBox');
+  const currencies = ['CLP','BRL','USD','EUR','GBP','CNY','HKD','JPY','TWD'];
+  const activeCur = currencies.filter(c => gastos.some(g=>g.moneda===c));
+
+  if(activeCur.length === 0){
+    balanceBox.innerHTML = '<div class="empty-note">Aún no hay gastos registrados.</div>';
+  } else {
+    balanceBox.innerHTML = activeCur.map(c=>{
+      const v = bal[c];
+      let line;
+      if(Math.abs(v) < 0.005){
+        line = `<span class="settled">Cuentas saldadas</span>`;
+      } else if(v > 0){
+        line = `<span class="owes">${PERSONA_B} le debe a ${PERSONA_A}</span>`;
+      } else {
+        line = `<span class="owes">${PERSONA_A} le debe a ${PERSONA_B}</span>`;
+      }
+      return `<div class="balance-line"><span>${c} — ${line}</span><span class="amt">${CUR_FMT[c](Math.abs(v))}</span></div>`;
+    }).join('');
+  }
+
+  const lista = document.getElementById('lista');
+  if(gastos.length === 0){
+    lista.innerHTML = '<div class="empty-note">Registra tu primer gasto arriba.</div>';
+    return;
+  }
+  const sorted = [...gastos].sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
+  lista.innerHTML = sorted.map(g=>{
+    const who = g.payer === 'A' ? PERSONA_A : PERSONA_B;
+    const whoClass = g.payer === 'A' ? 'a' : 'b';
+    const otro = g.payer === 'A' ? PERSONA_B : PERSONA_A;
+    const d = new Date(g.fecha);
+    const fechaStr = d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit'});
+    const repartoTxt = (g.reparto || 'half') === 'full' ? `100% para ${otro}` : 'dividido a la mitad';
+    return `<div class="entry">
+      <div class="desc">
+        <span class="who ${whoClass}">${who}</span>${g.desc}
+        <div class="meta">${fechaStr} · ${repartoTxt}</div>
+      </div>
+      <div class="right">
+        <span class="amount">${CUR_FMT[g.moneda](g.monto)}</span>
+        <button class="del" onclick="deleteGasto('${g.id}')" title="Eliminar">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('btnA').addEventListener('click', () => setPayer('A'));
+document.getElementById('btnB').addEventListener('click', () => setPayer('B'));
+document.getElementById('addBtn').addEventListener('click', addGasto);
+document.getElementById('monto').addEventListener('keydown', e => { if(e.key === 'Enter') addGasto(); });
+
+window.onload = loadData;
+</script>
+</body>
+</html>
