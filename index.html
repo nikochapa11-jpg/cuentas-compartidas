@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cuentas Claras</title>
-<!-- Biblioteca do Supabase -->
+<!-- Biblioteca de Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -98,6 +98,8 @@
     font-weight:bold;
     text-align:center;
     border-radius:2px;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
   }
   .payer-btn.active-a{background:var(--teal);color:#fff;border-color:var(--teal);}
   .payer-btn.active-b{background:var(--sienna);color:#fff;border-color:var(--sienna);}
@@ -260,8 +262,8 @@
       <div class="field">
         <label>¿Quién pagó?</label>
         <div class="payer-toggle">
-          <button type="button" class="payer-btn active-a" id="btnA" onclick="setPayer('A')">Nico</button>
-          <button type="button" class="payer-btn" id="btnB" onclick="setPayer('B')">Caro</button>
+          <div class="payer-btn active-a" id="btnA" onclick="setPayer('A')">Nico</div>
+          <div class="payer-btn" id="btnB" onclick="setPayer('B')">Caro</div>
         </div>
       </div>
     </div>
@@ -296,14 +298,13 @@
 </div>
 
 <script>
-// Configuración del Supabase
 const SUPABASE_URL = 'https://jpmhxyeunstilzbkydwy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwbWh4eWVuenN0aWx6Ymt5ZHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMzkyMzUsImV4cCI6MjEwMDcxNTIzNX0.oW7RLCHNxvg6PFCisrF1VSEumHxo_h9geXwlAf7CV0w';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const PERSONA_A = 'Nico';
 const PERSONA_B = 'Caro';
 
+let supabase = null;
 let payer = 'A';
 let gastos = [];
 
@@ -333,29 +334,44 @@ function setPayer(p){
 function refreshPayerButtons(){
   const btnA = document.getElementById('btnA');
   const btnB = document.getElementById('btnB');
-  btnA.className = 'payer-btn' + (payer==='A' ? ' active-a' : '');
-  btnB.className = 'payer-btn' + (payer==='B' ? ' active-b' : '');
+  if(payer === 'A'){
+    btnA.className = 'payer-btn active-a';
+    btnB.className = 'payer-btn';
+  } else {
+    btnA.className = 'payer-btn';
+    btnB.className = 'payer-btn active-b';
+  }
 }
 
 async function loadData(){
-  setStatus('Cargando gastos...');
-
-  const { data, error } = await supabase.from('gastos').select('*');
+  setStatus('Cargando datos...');
   
-  if (error) {
-    setStatus('Error al conectar con el servidor', true);
-    console.error(error);
-  } else {
-    gastos = data.map(g => ({
-      id: g.id,
-      monto: parseFloat(g.monto),
-      moneda: g.moneda,
-      payer: g.payer,
-      reparto: g.reparto,
-      desc: g.desc_texto,
-      fecha: g.fecha
-    }));
-    setStatus('');
+  try {
+    if (!window.supabase) {
+      setStatus('Error: No se pudo cargar Supabase', true);
+      return;
+    }
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const { data, error } = await supabase.from('gastos').select('*');
+    
+    if (error) {
+      setStatus('Error Supabase: ' + error.message, true);
+      console.error(error);
+    } else {
+      gastos = (data || []).map(g => ({
+        id: g.id,
+        monto: parseFloat(g.monto),
+        moneda: g.moneda,
+        payer: g.payer,
+        reparto: g.reparto,
+        desc: g.desc_texto,
+        fecha: g.fecha
+      }));
+      setStatus('');
+    }
+  } catch(e) {
+    setStatus('Error al conectar: ' + e.message, true);
   }
   
   refreshPayerButtons();
@@ -363,6 +379,11 @@ async function loadData(){
 }
 
 async function addGasto(){
+  if(!supabase){
+    setStatus('No hay conexión con el servidor', true);
+    return;
+  }
+
   const monto = parseFloat(document.getElementById('monto').value);
   const moneda = document.getElementById('moneda').value;
   const desc = document.getElementById('desc').value.trim();
@@ -403,6 +424,7 @@ async function addGasto(){
 }
 
 async function deleteGasto(id){
+  if(!supabase) return;
   setStatus('Eliminando...');
   const { error } = await supabase.from('gastos').delete().eq('id', id);
   
@@ -478,7 +500,8 @@ document.getElementById('monto').addEventListener('keydown', e=>{
   if(e.key === 'Enter') addGasto();
 });
 
-loadData();
+// Inicializar al cargar la página
+window.addEventListener('DOMContentLoaded', loadData);
 </script>
 </body>
 </html>
