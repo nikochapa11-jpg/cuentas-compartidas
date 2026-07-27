@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cuentas Claras</title>
-<!-- Biblioteca de Supabase -->
+<!-- Librería oficial de Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -218,11 +218,11 @@
   .status{
     text-align:center;
     font-family:'Courier New',monospace;
-    font-size:0.7rem;
+    font-size:0.75rem;
     color:var(--ink-soft);
     margin-top:-8px;
     margin-bottom:16px;
-    min-height:14px;
+    min-height:16px;
   }
 </style>
 </head>
@@ -234,7 +234,7 @@
     <div class="sub">gastos compartidos Nico & Caro</div>
   </header>
 
-  <div class="status" id="status">Cargando datos...</div>
+  <div class="status" id="status"></div>
 
   <div class="card">
     <h2>Nuevo gasto</h2>
@@ -262,8 +262,8 @@
       <div class="field">
         <label>¿Quién pagó?</label>
         <div class="payer-toggle">
-          <div class="payer-btn active-a" id="btnA" onclick="setPayer('A')">Nico</div>
-          <div class="payer-btn" id="btnB" onclick="setPayer('B')">Caro</div>
+          <div class="payer-btn active-a" id="btnA">Nico</div>
+          <div class="payer-btn" id="btnB">Caro</div>
         </div>
       </div>
     </div>
@@ -282,7 +282,7 @@
         </select>
       </div>
     </div>
-    <button class="add-btn" onclick="addGasto()">Registrar gasto</button>
+    <button class="add-btn" id="addBtn">Registrar gasto</button>
   </div>
 
   <div class="summary">
@@ -304,7 +304,8 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const PERSONA_A = 'Nico';
 const PERSONA_B = 'Caro';
 
-let supabase = null;
+// Renombrado a dbClient para no chocar con la librería global de Supabase
+let dbClient = null;
 let payer = 'A';
 let gastos = [];
 
@@ -323,15 +324,11 @@ const CUR_FMT = {
 function setStatus(msg, isErr){
   const s = document.getElementById('status');
   s.textContent = msg || '';
-  s.style.color = isErr ? '#8C3B2E' : '';
+  s.style.color = isErr ? '#8C3B2E' : '#1B6B63';
 }
 
 function setPayer(p){
   payer = p;
-  refreshPayerButtons();
-}
-
-function refreshPayerButtons(){
   const btnA = document.getElementById('btnA');
   const btnB = document.getElementById('btnB');
   if(payer === 'A'){
@@ -347,17 +344,18 @@ async function loadData(){
   setStatus('Cargando datos...');
   
   try {
-    if (!window.supabase) {
-      setStatus('Error: No se pudo cargar Supabase', true);
+    if (typeof window.supabase === 'undefined') {
+      setStatus('Error: Librería de Supabase no cargó', true);
+      render();
       return;
     }
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const { data, error } = await supabase.from('gastos').select('*');
+    const { data, error } = await dbClient.from('gastos').select('*');
     
     if (error) {
       setStatus('Error Supabase: ' + error.message, true);
-      console.error(error);
     } else {
       gastos = (data || []).map(g => ({
         id: g.id,
@@ -371,16 +369,15 @@ async function loadData(){
       setStatus('');
     }
   } catch(e) {
-    setStatus('Error al conectar: ' + e.message, true);
+    setStatus('Error de conexión: ' + e.message, true);
   }
-  
-  refreshPayerButtons();
+
   render();
 }
 
 async function addGasto(){
-  if(!supabase){
-    setStatus('No hay conexión con el servidor', true);
+  if(!dbClient){
+    setStatus('Sin conexión con la base de datos', true);
     return;
   }
 
@@ -406,7 +403,7 @@ async function addGasto(){
 
   setStatus('Guardando...');
   
-  const { error } = await supabase.from('gastos').insert([entry]);
+  const { error } = await dbClient.from('gastos').insert([entry]);
 
   if(error){
     setStatus('Error al guardar: ' + error.message, true);
@@ -424,12 +421,12 @@ async function addGasto(){
 }
 
 async function deleteGasto(id){
-  if(!supabase) return;
+  if(!dbClient) return;
   setStatus('Eliminando...');
-  const { error } = await supabase.from('gastos').delete().eq('id', id);
+  const { error } = await dbClient.from('gastos').delete().eq('id', id);
   
   if (error) {
-    setStatus('Error al eliminar', true);
+    setStatus('Error al eliminar: ' + error.message, true);
   } else {
     gastos = gastos.filter(g => g.id !== id);
     setStatus('');
@@ -496,12 +493,12 @@ function render(){
   }).join('');
 }
 
-document.getElementById('monto').addEventListener('keydown', e=>{
-  if(e.key === 'Enter') addGasto();
-});
+document.getElementById('btnA').addEventListener('click', () => setPayer('A'));
+document.getElementById('btnB').addEventListener('click', () => setPayer('B'));
+document.getElementById('addBtn').addEventListener('click', addGasto);
+document.getElementById('monto').addEventListener('keydown', e => { if(e.key === 'Enter') addGasto(); });
 
-// Inicializar al cargar la página
-window.addEventListener('DOMContentLoaded', loadData);
+window.onload = loadData;
 </script>
 </body>
 </html>
