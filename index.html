@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cuentas Claras</title>
+<!-- Librería oficial de Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -297,206 +298,223 @@
 </div>
 
 <script>
-const SUPABASE_URL = 'https://jpmhxyeunstilzbkydwy.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwbWh4eWVuenN0aWx6Ymt5ZHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMzkyMzUsImV4cCI6MjEwMDcxNTIzNX0.oW7RLCHNxvg6PFCisrF1VSEumHxo_h9geXwlAf7CV0w';
+(function() {
+  var URL_DB = 'https://jpmhxyeunstilzbkydwy.supabase.co';
+  var KEY_DB = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwbWh4eWVuenN0aWx6Ymt5ZHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxMzkyMzUsImV4cCI6MjEwMDcxNTIzNX0.oW7RLCHNxvg6PFCisrF1VSEumHxo_h9geXwlAf7CV0w';
 
-const PERSONA_A = 'Nico';
-const PERSONA_B = 'Caro';
+  var PERSONA_A = 'Nico';
+  var PERSONA_B = 'Caro';
 
-let dbClient = null;
-let payer = 'A';
-let gastos = [];
+  var client = null;
+  var payer = 'A';
+  var gastos = [];
 
-const CUR_FMT = {
-  CLP: n => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n),
-  BRL: n => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n),
-  USD: n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n),
-  EUR: n => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(n),
-  GBP: n => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(n),
-  CNY: n => new Intl.NumberFormat('zh-CN',{style:'currency',currency:'CNY'}).format(n),
-  HKD: n => new Intl.NumberFormat('en-HK',{style:'currency',currency:'HKD'}).format(n),
-  JPY: n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(n),
-  TWD: n => new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD'}).format(n)
-};
-
-function setStatus(msg, isErr){
-  const s = document.getElementById('status');
-  s.textContent = msg || '';
-  s.style.color = isErr ? '#8C3B2E' : '#1B6B63';
-}
-
-function setPayer(p){
-  payer = p;
-  const btnA = document.getElementById('btnA');
-  const btnB = document.getElementById('btnB');
-  if(payer === 'A'){
-    btnA.className = 'payer-btn active-a';
-    btnB.className = 'payer-btn';
-  } else {
-    btnA.className = 'payer-btn';
-    btnB.className = 'payer-btn active-b';
-  }
-}
-
-async function loadData(){
-  setStatus('Cargando datos...');
-  
-  try {
-    if (typeof window.supabase === 'undefined') {
-      setStatus('Error: Librería de Supabase no cargó', true);
-      render();
-      return;
-    }
-    
-    dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    const { data, error } = await dbClient.from('gastos').select('*');
-    
-    if (error) {
-      setStatus('Error Supabase: ' + error.message, true);
-    } else {
-      gastos = (data || []).map(g => ({
-        id: g.id,
-        monto: parseFloat(g.monto),
-        moneda: g.moneda,
-        payer: g.payer,
-        reparto: g.reparto,
-        desc: g.desc_texto,
-        fecha: g.fecha
-      }));
-      setStatus('');
-    }
-  } catch(e) {
-    setStatus('Error de conexión: ' + e.message, true);
-  }
-
-  render();
-}
-
-async function addGasto(){
-  if(!dbClient){
-    setStatus('Sin conexión con la base de datos', true);
-    return;
-  }
-
-  const monto = parseFloat(document.getElementById('monto').value);
-  const moneda = document.getElementById('moneda').value;
-  const desc = document.getElementById('desc').value.trim();
-  const reparto = document.getElementById('reparto').value;
-
-  if(!monto || monto <= 0){
-    setStatus('Ingresa un monto válido', true);
-    return;
-  }
-
-  const entry = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-    monto: monto,
-    moneda: moneda,
-    payer: payer,
-    reparto: reparto,
-    desc_texto: desc || '(sin descripción)',
-    fecha: new Date().toISOString()
+  var CUR_FMT = {
+    CLP: function(n){ return new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n); },
+    BRL: function(n){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n); },
+    USD: function(n){ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n); },
+    EUR: function(n){ return new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(n); },
+    GBP: function(n){ return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(n); },
+    CNY: function(n){ return new Intl.NumberFormat('zh-CN',{style:'currency',currency:'CNY'}).format(n); },
+    HKD: function(n){ return new Intl.NumberFormat('en-HK',{style:'currency',currency:'HKD'}).format(n); },
+    JPY: function(n){ return new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(n); },
+    TWD: function(n){ return new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD'}).format(n); }
   };
 
-  setStatus('Guardando...');
-  
-  const { error } = await dbClient.from('gastos').insert([entry]);
+  function setStatus(msg, isErr){
+    var s = document.getElementById('status');
+    if(!s) return;
+    s.textContent = msg || '';
+    s.style.color = isErr ? '#8C3B2E' : '#1B6B63';
+  }
 
-  if(error){
-    setStatus('Error al guardar: ' + error.message, true);
-  } else {
-    gastos.push({
-      ...entry,
-      desc: entry.desc_texto
+  function setPayer(p){
+    payer = p;
+    var btnA = document.getElementById('btnA');
+    var btnB = document.getElementById('btnB');
+    if(payer === 'A'){
+      btnA.className = 'payer-btn active-a';
+      btnB.className = 'payer-btn';
+    } else {
+      btnA.className = 'payer-btn';
+      btnB.className = 'payer-btn active-b';
+    }
+  }
+
+  function computeBalances(){
+    var bal = {CLP:0, BRL:0, USD:0, EUR:0, GBP:0, CNY:0, HKD:0, JPY:0, TWD:0};
+    gastos.forEach(function(g){
+      var credito = (g.reparto || 'half') === 'full' ? g.monto : g.monto/2;
+      if(g.payer === 'A') bal[g.moneda] += credito;
+      else bal[g.moneda] -= credito;
     });
-    document.getElementById('monto').value = '';
-    document.getElementById('desc').value = '';
-    setStatus('Gasto registrado ✓');
-    setTimeout(()=>setStatus(''), 1500);
-    render();
+    return bal;
   }
-}
 
-async function deleteGasto(id){
-  if(!dbClient) return;
-  setStatus('Eliminando...');
-  const { error } = await dbClient.from('gastos').delete().eq('id', id);
-  
-  if (error) {
-    setStatus('Error al eliminar: ' + error.message, true);
-  } else {
-    gastos = gastos.filter(g => g.id !== id);
-    setStatus('');
-    render();
-  }
-}
+  function render(){
+    var bal = computeBalances();
+    var balanceBox = document.getElementById('balanceBox');
+    var currencies = ['CLP','BRL','USD','EUR','GBP','CNY','HKD','JPY','TWD'];
+    var activeCur = currencies.filter(function(c){
+      return gastos.some(function(g){ return g.moneda === c; });
+    });
 
-function computeBalances(){
-  const bal = {CLP:0, BRL:0, USD:0, EUR:0, GBP:0, CNY:0, HKD:0, JPY:0, TWD:0};
-  gastos.forEach(g=>{
-    const credito = (g.reparto || 'half') === 'full' ? g.monto : g.monto/2;
-    if(g.payer==='A') bal[g.moneda] += credito;
-    else bal[g.moneda] -= credito;
-  });
-  return bal;
-}
+    if(activeCur.length === 0){
+      balanceBox.innerHTML = '<div class="empty-note">Aún no hay gastos registrados.</div>';
+    } else {
+      balanceBox.innerHTML = activeCur.map(function(c){
+        var v = bal[c];
+        var line;
+        if(Math.abs(v) < 0.005){
+          line = '<span class="settled">Cuentas saldadas</span>';
+        } else if(v > 0){
+          line = '<span class="owes">' + PERSONA_B + ' le debe a ' + PERSONA_A + '</span>';
+        } else {
+          line = '<span class="owes">' + PERSONA_A + ' le debe a ' + PERSONA_B + '</span>';
+        }
+        return '<div class="balance-line"><span>' + c + ' — ' + line + '</span><span class="amt">' + CUR_FMT[c](Math.abs(v)) + '</span></div>';
+      }).join('');
+    }
 
-function render(){
-  const bal = computeBalances();
-  const balanceBox = document.getElementById('balanceBox');
-  const currencies = ['CLP','BRL','USD','EUR','GBP','CNY','HKD','JPY','TWD'];
-  const activeCur = currencies.filter(c => gastos.some(g=>g.moneda===c));
-
-  if(activeCur.length === 0){
-    balanceBox.innerHTML = '<div class="empty-note">Aún no hay gastos registrados.</div>';
-  } else {
-    balanceBox.innerHTML = activeCur.map(c=>{
-      const v = bal[c];
-      let line;
-      if(Math.abs(v) < 0.005){
-        line = `<span class="settled">Cuentas saldadas</span>`;
-      } else if(v > 0){
-        line = `<span class="owes">${PERSONA_B} le debe a ${PERSONA_A}</span>`;
-      } else {
-        line = `<span class="owes">${PERSONA_A} le debe a ${PERSONA_B}</span>`;
-      }
-      return `<div class="balance-line"><span>${c} — ${line}</span><span class="amt">${CUR_FMT[c](Math.abs(v))}</span></div>`;
+    var lista = document.getElementById('lista');
+    if(gastos.length === 0){
+      lista.innerHTML = '<div class="empty-note">Registra tu primer gasto arriba.</div>';
+      return;
+    }
+    var sorted = gastos.slice().sort(function(a,b){ return new Date(b.fecha) - new Date(a.fecha); });
+    lista.innerHTML = sorted.map(function(g){
+      var who = g.payer === 'A' ? PERSONA_A : PERSONA_B;
+      var whoClass = g.payer === 'A' ? 'a' : 'b';
+      var otro = g.payer === 'A' ? PERSONA_B : PERSONA_A;
+      var d = new Date(g.fecha);
+      var fechaStr = d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit'});
+      var repartoTxt = (g.reparto || 'half') === 'full' ? ('100% para ' + otro) : 'dividido a la mitad';
+      return '<div class="entry">' +
+        '<div class="desc">' +
+          '<span class="who ' + whoClass + '">' + who + '</span>' + g.desc +
+          '<div class="meta">' + fechaStr + ' · ' + repartoTxt + '</div>' +
+        '</div>' +
+        '<div class="right">' +
+          '<span class="amount">' + CUR_FMT[g.moneda](g.monto) + '</span>' +
+          '<button class="del" data-id="' + g.id + '" title="Eliminar">✕</button>' +
+        '</div>' +
+      '</div>';
     }).join('');
+
+    // Asignar handlers a botones de eliminar dinámicos
+    var delBtns = lista.querySelectorAll('.del');
+    delBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        deleteGasto(this.getAttribute('data-id'));
+      });
+    });
   }
 
-  const lista = document.getElementById('lista');
-  if(gastos.length === 0){
-    lista.innerHTML = '<div class="empty-note">Registra tu primer gasto arriba.</div>';
-    return;
+  async function loadData(){
+    setStatus('Cargando datos...');
+    try {
+      if (typeof window.supabase === 'undefined') {
+        setStatus('Error: Librería de Supabase no cargó', true);
+        render();
+        return;
+      }
+      
+      client = window.supabase.createClient(URL_DB, KEY_DB);
+
+      var res = await client.from('gastos').select('*');
+      if (res.error) {
+        setStatus('Error Supabase: ' + res.error.message, true);
+      } else {
+        gastos = (res.data || []).map(function(g){
+          return {
+            id: g.id,
+            monto: parseFloat(g.monto),
+            moneda: g.moneda,
+            payer: g.payer,
+            reparto: g.reparto,
+            desc: g.desc_texto,
+            fecha: g.fecha
+          };
+        });
+        setStatus('');
+      }
+    } catch(e) {
+      setStatus('Error de conexión: ' + e.message, true);
+    }
+    render();
   }
-  const sorted = [...gastos].sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
-  lista.innerHTML = sorted.map(g=>{
-    const who = g.payer === 'A' ? PERSONA_A : PERSONA_B;
-    const whoClass = g.payer === 'A' ? 'a' : 'b';
-    const otro = g.payer === 'A' ? PERSONA_B : PERSONA_A;
-    const d = new Date(g.fecha);
-    const fechaStr = d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit'});
-    const repartoTxt = (g.reparto || 'half') === 'full' ? `100% para ${otro}` : 'dividido a la mitad';
-    return `<div class="entry">
-      <div class="desc">
-        <span class="who ${whoClass}">${who}</span>${g.desc}
-        <div class="meta">${fechaStr} · ${repartoTxt}</div>
-      </div>
-      <div class="right">
-        <span class="amount">${CUR_FMT[g.moneda](g.monto)}</span>
-        <button class="del" onclick="deleteGasto('${g.id}')" title="Eliminar">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-}
 
-document.getElementById('btnA').addEventListener('click', () => setPayer('A'));
-document.getElementById('btnB').addEventListener('click', () => setPayer('B'));
-document.getElementById('addBtn').addEventListener('click', addGasto);
-document.getElementById('monto').addEventListener('keydown', e => { if(e.key === 'Enter') addGasto(); });
+  async function addGasto(){
+    if(!client){
+      setStatus('Sin conexión con la base de datos', true);
+      return;
+    }
 
-window.onload = loadData;
+    var monto = parseFloat(document.getElementById('monto').value);
+    var moneda = document.getElementById('moneda').value;
+    var desc = document.getElementById('desc').value.trim();
+    var reparto = document.getElementById('reparto').value;
+
+    if(!monto || monto <= 0){
+      setStatus('Ingresa un monto válido', true);
+      return;
+    }
+
+    var entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      monto: monto,
+      moneda: moneda,
+      payer: payer,
+      reparto: reparto,
+      desc_texto: desc || '(sin descripción)',
+      fecha: new Date().toISOString()
+    };
+
+    setStatus('Guardando...');
+    var res = await client.from('gastos').insert([entry]);
+
+    if(res.error){
+      setStatus('Error al guardar: ' + res.error.message, true);
+    } else {
+      gastos.push({
+        id: entry.id,
+        monto: entry.monto,
+        moneda: entry.moneda,
+        payer: entry.payer,
+        reparto: entry.reparto,
+        desc: entry.desc_texto,
+        fecha: entry.fecha
+      });
+      document.getElementById('monto').value = '';
+      document.getElementById('desc').value = '';
+      setStatus('Gasto registrado ✓');
+      setTimeout(function(){ setStatus(''); }, 1500);
+      render();
+    }
+  }
+
+  async function deleteGasto(id){
+    if(!client) return;
+    setStatus('Eliminando...');
+    var res = await client.from('gastos').delete().eq('id', id);
+    
+    if (res.error) {
+      setStatus('Error al eliminar: ' + res.error.message, true);
+    } else {
+      gastos = gastos.filter(function(g){ return g.id !== id; });
+      setStatus('');
+      render();
+    }
+  }
+
+  // Event Listeners
+  document.getElementById('btnA').addEventListener('click', function(){ setPayer('A'); });
+  document.getElementById('btnB').addEventListener('click', function(){ setPayer('B'); });
+  document.getElementById('addBtn').addEventListener('click', addGasto);
+  document.getElementById('monto').addEventListener('keydown', function(e){ if(e.key === 'Enter') addGasto(); });
+
+  window.addEventListener('DOMContentLoaded', loadData);
+})();
 </script>
 </body>
 </html>
