@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cuentas Claras</title>
-<!-- Librería oficial de Supabase -->
+<!-- Carga da biblioteca oficial de Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -304,7 +304,6 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const PERSONA_A = 'Nico';
 const PERSONA_B = 'Caro';
 
-// Renombrado a dbClient para no chocar con la librería global de Supabase
 let dbClient = null;
 let payer = 'A';
 let gastos = [];
